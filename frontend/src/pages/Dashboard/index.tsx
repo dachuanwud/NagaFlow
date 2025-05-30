@@ -10,8 +10,9 @@ import {
   PlayCircleOutlined,
   DownloadOutlined,
 } from '@ant-design/icons';
-import Plot from 'react-plotly.js';
 import { useThemeStore } from '../../stores/themeStore';
+import { PerformanceChart } from '../../components/Charts';
+import { mockApi } from '../../services/mockApi';
 import './index.css';
 
 interface StatCardProps {
@@ -25,7 +26,7 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeType, icon, color }) => {
   const { isDark } = useThemeStore();
-  
+
   return (
     <Card
       style={{
@@ -44,7 +45,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeType, i
             valueStyle={{ fontSize: '32px', fontWeight: 'bold' }}
           />
           {change && (
-            <div style={{ 
+            <div style={{
               color: changeType === 'positive' ? '#00ff88' : changeType === 'negative' ? '#ff4757' : '#a0a9c0',
               fontSize: '14px',
               marginTop: '8px',
@@ -81,28 +82,8 @@ export const Dashboard: React.FC = () => {
   const [performanceData, setPerformanceData] = useState<any>(null);
 
   useEffect(() => {
-    // 模拟性能数据
-    const generatePerformanceData = () => {
-      const dates = [];
-      const values = [];
-      const baseDate = new Date('2023-01-01');
-      let currentValue = 100000;
-
-      for (let i = 0; i < 365; i++) {
-        const date = new Date(baseDate);
-        date.setDate(date.getDate() + i);
-        dates.push(date.toISOString().split('T')[0]);
-        
-        // 模拟资金曲线波动
-        const dailyReturn = (Math.random() - 0.48) * 0.02; // 略微正向偏移
-        currentValue *= (1 + dailyReturn);
-        values.push(currentValue);
-      }
-
-      return { dates, values };
-    };
-
-    const data = generatePerformanceData();
+    // Use mock API to generate performance data
+    const data = mockApi.generatePerformanceData();
     setPerformanceData(data);
   }, []);
 
@@ -196,38 +177,11 @@ export const Dashboard: React.FC = () => {
                 border: `1px solid ${isDark ? '#3a4553' : '#f0f0f0'}`,
               }}
             >
-              {performanceData && (
-                <Plot
-                  data={[
-                    {
-                      x: performanceData.dates,
-                      y: performanceData.values,
-                      type: 'scatter',
-                      mode: 'lines',
-                      line: { color: '#00d4ff', width: 2 },
-                      name: 'Portfolio Value',
-                    },
-                  ]}
-                  layout={{
-                    height: 320,
-                    margin: { l: 50, r: 20, t: 20, b: 40 },
-                    paper_bgcolor: 'transparent',
-                    plot_bgcolor: 'transparent',
-                    font: { color: isDark ? '#ffffff' : '#000000' },
-                    xaxis: {
-                      gridcolor: isDark ? '#3a4553' : '#f0f0f0',
-                      showgrid: true,
-                    },
-                    yaxis: {
-                      gridcolor: isDark ? '#3a4553' : '#f0f0f0',
-                      showgrid: true,
-                      tickformat: ',.0f',
-                    },
-                  }}
-                  config={{ displayModeBar: false }}
-                  style={{ width: '100%' }}
-                />
-              )}
+              <PerformanceChart
+                data={performanceData}
+                height={320}
+                title="Portfolio Performance"
+              />
             </Card>
 
             {/* 最近活动 */}
@@ -281,10 +235,10 @@ export const Dashboard: React.FC = () => {
                       description={`${item.type} • Updated ${item.updated}`}
                     />
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ 
-                        fontSize: '18px', 
-                        fontWeight: 'bold', 
-                        color: '#00ff88' 
+                      <div style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        color: '#00ff88'
                       }}>
                         {item.return}%
                       </div>

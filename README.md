@@ -68,7 +68,7 @@ npm install
 npm run dev
 ```
 
-前端将在 http://localhost:5173 运行
+前端将在 http://localhost:3000 运行
 
 ### 后端开发环境
 

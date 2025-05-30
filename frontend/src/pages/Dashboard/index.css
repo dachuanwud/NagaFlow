@@ -1,0 +1,65 @@
+/* Dashboard页面样式 */
+.dashboard {
+  min-height: 100%;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 统计卡片样式 */
+.dashboard .ant-card {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.dashboard .ant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* 图表容器样式 */
+.dashboard .plotly-chart {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 12px;
+  }
+  
+  .dashboard .ant-col {
+    margin-bottom: 16px;
+  }
+}
+
+/* 加载动画 */
+.dashboard .ant-spin-container {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 列表项动画 */
+.dashboard .ant-list-item {
+  transition: all 0.3s ease;
+}
+
+.dashboard .ant-list-item:hover {
+  background: rgba(0, 212, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 0 -12px;
+}
