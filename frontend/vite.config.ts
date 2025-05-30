@@ -15,7 +15,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8003', // 更新为实际后端端口
         changeOrigin: true,
         secure: false,
       },

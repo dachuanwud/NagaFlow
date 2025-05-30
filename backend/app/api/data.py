@@ -11,9 +11,9 @@ import os
 
 # 导入现有的bn_data模块
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'bn_data'))
-from core.symbols import async_get_usdt_symbols, spot_symbols_filter
+from core.symbols import async_get_usdt_symbols, async_get_usdt_symbols_async, spot_symbols_filter
 from core.common import ping
-from main import run as bn_data_run
+# Note: bn_data_run import removed to avoid circular import
 
 router = APIRouter()
 
@@ -46,18 +46,19 @@ async def get_symbols(trade_type: str = "swap"):
             'delimiter': '/',
             'prefix': 'data/futures/um/daily/klines/' if trade_type == 'swap' else 'data/spot/daily/klines/'
         }
-        symbols = async_get_usdt_symbols(params)
-        
+        # 使用异步版本避免事件循环冲突
+        symbols = await async_get_usdt_symbols_async(params)
+
         if trade_type == 'spot':
             symbols = spot_symbols_filter(symbols)
-        
+
         symbol_list = []
         for symbol in symbols:
             symbol_list.append(SymbolInfo(
                 symbol=symbol,
                 status="available"
             ))
-        
+
         return symbol_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get symbols: {str(e)}")
@@ -74,45 +75,45 @@ async def start_data_download(
 ):
     """启动数据下载任务"""
     global data_status
-    
+
     if data_status.status == "downloading":
         raise HTTPException(status_code=400, detail="Data download already in progress")
-    
+
     # 更新状态
     data_status.status = "downloading"
     data_status.progress = 0.0
     data_status.message = "Starting data download..."
-    
+
     # 在后台运行数据下载
     background_tasks.add_task(run_data_download, request)
-    
+
     return {"message": "Data download started", "status": data_status.status}
 
 async def run_data_download(request: DataDownloadRequest):
     """后台运行数据下载任务"""
     global data_status
-    
+
     try:
         data_status.message = "Initializing download..."
         data_status.progress = 10.0
-        
+
         # 这里可以调用现有的bn_data.main.run()函数
         # 或者重构为更细粒度的控制
         data_status.message = "Downloading market data..."
         data_status.progress = 50.0
-        
+
         # 模拟下载过程
         await asyncio.sleep(2)
-        
+
         data_status.message = "Processing data..."
         data_status.progress = 80.0
-        
+
         await asyncio.sleep(1)
-        
+
         data_status.status = "completed"
         data_status.progress = 100.0
         data_status.message = "Data download completed successfully"
-        
+
     except Exception as e:
         data_status.status = "error"
         data_status.message = f"Download failed: {str(e)}"
@@ -127,7 +128,7 @@ async def get_market_data(
     try:
         # 这里需要实现从pickle文件读取数据的逻辑
         # 可以复用crypto_cta中的数据读取代码
-        
+
         return {
             "symbol": symbol,
             "interval": interval,

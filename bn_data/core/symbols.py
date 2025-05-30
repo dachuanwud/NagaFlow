@@ -31,11 +31,32 @@ async def get_symbols(params):
         return result
 
 def async_get_all_symbols(params):
-    if sys.platform == 'win32':
-        # Windows系统下使用SelectorEventLoop
+    # 统一使用get_or_create_eventloop来处理事件循环
+    # 这样可以避免在已有事件循环中调用asyncio.run()的错误
+    try:
+        # 尝试获取当前事件循环
+        loop = asyncio.get_running_loop()
+        # 如果已经在事件循环中，创建一个任务
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(lambda: get_or_create_eventloop().run_until_complete(get_symbols(params)))
+            return future.result()
+    except RuntimeError:
+        # 没有运行中的事件循环，使用get_or_create_eventloop
         loop = get_or_create_eventloop()
         return loop.run_until_complete(get_symbols(params))
-    return asyncio.run(get_symbols(params))
+
+# 新增：真正的异步版本，用于FastAPI
+async def async_get_all_symbols_async(params):
+    """异步版本的获取所有交易对函数，用于FastAPI等异步环境"""
+    return await get_symbols(params)
+
+async def async_get_usdt_symbols_async(params):
+    """异步版本的获取USDT交易对函数，用于FastAPI等异步环境"""
+    all_symbols = await async_get_all_symbols_async(params)
+    usdt = set()
+    [usdt.add(i) for i in all_symbols if i.endswith('USDT')]
+    return usdt
 
 def async_get_usdt_symbols(params):
     all_symbols = async_get_all_symbols(params)

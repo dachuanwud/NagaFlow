@@ -39,7 +39,7 @@ app = FastAPI(
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite默认端口
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],  # Vite默认端口
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,10 +71,35 @@ async def health_check():
 
 
 if __name__ == "__main__":
+    import socket
+
+    # 检查端口是否可用，如果不可用则使用备用端口
+    def is_port_available(port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('localhost', port))
+                return True
+            except OSError:
+                return False
+
+    # 尝试端口列表
+    ports = [8000, 8001, 8002, 8003, 8004]
+    selected_port = None
+
+    for port in ports:
+        if is_port_available(port):
+            selected_port = port
+            break
+
+    if selected_port is None:
+        print("❌ 无法找到可用端口，请手动停止占用端口的进程")
+        exit(1)
+
+    print(f"🚀 启动服务器在端口 {selected_port}")
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=selected_port,
         reload=True,
         log_level="info"
     )

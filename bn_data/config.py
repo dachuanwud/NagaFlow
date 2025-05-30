@@ -17,9 +17,9 @@ CONCURRENCY = max(cpu, 1)
 semaphore = asyncio.Semaphore(value=min(2 * cpu, 8))
 api_semaphore = asyncio.Semaphore(value=min(2 * cpu, 2))
 trade_type = 'swap'
-proxy = 'socks5h://127.0.0.1:1080'  # VPN配置，一定要改成自己的VPN
+proxy = None  # VPN配置，设为None表示不使用代理
 # 是否使用代理服务器下载数据
-use_proxy_download_file = True
+use_proxy_download_file = False
 file_proxy = proxy if use_proxy_download_file else None
 
 # 设置网络请求失败（超时）时是否打印异常，True: 不打印，False: 打印，建议老用户设为True

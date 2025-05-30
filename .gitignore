@@ -212,3 +212,101 @@ bn_data/pickle_data/
 # CTA strategy data
 crypto_cta/data/
 crypto_cta/pickle_data/
+
+# Additional IDE and editor files
+*.sublime-project
+*.sublime-workspace
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/c_cpp_properties.json
+.vscode/extensions.json
+*.code-workspace
+
+# Additional OS files
+*.tmp
+*.temp
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Additional Node.js files
+.npm-cache/
+.node_gyp/
+.sass-cache/
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Additional Python files
+*.egg-info/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+# Additional build and distribution files
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.dmg
+*.iso
+
+# Additional log files
+*.log.*
+*.out
+*.err
+
+# Additional temporary and cache files
+.cache/
+.tmp/
+.temp/
+*.swp
+*.swo
+*~
+.#*
+\#*#
+
+# Additional data files that shouldn't be tracked
+*.csv.gz
+*.json.gz
+*.parquet
+*.feather
+*.arrow
+
+# Additional project-specific patterns
+# Market data cache
+*/market/
+market/
+# Any additional output directories
+results/
+reports/
+analysis/
+# Configuration backups
+*.conf.bak
+*.config.bak
+
+# Additional security-sensitive files
+.secrets
+.credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Additional development files
+.editorconfig
+.prettierrc*
+.eslintrc*
+.babelrc*
+.browserslistrc
+.nvmrc
+.tool-versions
