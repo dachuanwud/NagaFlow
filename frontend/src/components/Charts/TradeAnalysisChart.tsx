@@ -12,25 +12,16 @@ interface TradeAnalysisChartProps {
   chartType?: 'pnl' | 'volume' | 'cumulative';
 }
 
-export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({ 
-  data, 
-  height = 400, 
+export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
+  data,
+  height = 400,
   title = "交易分析",
   loading = false,
   chartType = 'pnl'
 }) => {
   const { isDark } = useThemeStore();
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading || isLoading || !data || !data.length) {
+  if (loading || !data || !data.length) {
     return (
       <div style={{
         height,
@@ -44,13 +35,13 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
         gap: '12px'
       }}>
         <Spin size="large" />
-        <span>📈 加载交易分析数据中...</span>
+        <span>📈 {loading ? '加载交易分析数据中...' : '暂无交易数据'}</span>
       </div>
     );
   }
 
   // 按时间排序交易记录
-  const sortedTrades = [...data].sort((a, b) => 
+  const sortedTrades = [...data].sort((a, b) =>
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
@@ -62,7 +53,7 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
       // 盈亏分布图
       const winningTrades = sortedTrades.filter(t => t.pnl > 0);
       const losingTrades = sortedTrades.filter(t => t.pnl < 0);
-      
+
       plotData = [
         {
           x: winningTrades.map((_, i) => i + 1),
@@ -91,7 +82,7 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
                          '<extra></extra>',
         }
       ];
-      
+
       layoutConfig = {
         xaxis: {
           title: '交易序号',
@@ -116,7 +107,7 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
       }, {} as Record<string, { date: string; volume: number; trades: number }>);
 
       const volumeData = Object.values(dailyVolume);
-      
+
       plotData = [
         {
           x: volumeData.map(d => d.date),
@@ -132,7 +123,7 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
                          '<extra></extra>',
         }
       ];
-      
+
       layoutConfig = {
         xaxis: {
           title: '日期',
@@ -155,7 +146,7 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
           pnl: trade.pnl,
         };
       });
-      
+
       plotData = [
         {
           x: cumulativeData.map(d => d.timestamp),
@@ -176,7 +167,7 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
                          '<extra></extra>',
         }
       ];
-      
+
       layoutConfig = {
         xaxis: {
           title: '时间',
@@ -265,8 +256,8 @@ export const TradeAnalysisChart: React.FC<TradeAnalysisChartProps> = ({
   };
 
   return (
-    <div style={{ 
-      width: '100%', 
+    <div style={{
+      width: '100%',
       height,
       borderRadius: '8px',
       overflow: 'hidden',

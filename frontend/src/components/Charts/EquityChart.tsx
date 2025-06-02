@@ -10,26 +10,18 @@ interface EquityChartProps {
   };
   height?: number;
   title?: string;
+  loading?: boolean;
 }
 
-export const EquityChart: React.FC<EquityChartProps> = ({ 
-  data, 
-  height = 400, 
-  title = "Equity Curve" 
+export const EquityChart: React.FC<EquityChartProps> = ({
+  data,
+  height = 400,
+  title = "资金曲线",
+  loading = false
 }) => {
   const { isDark } = useThemeStore();
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading || !data) {
+  if (loading || !data) {
     return (
       <div style={{
         height,
@@ -40,7 +32,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
         borderRadius: '8px',
         color: isDark ? '#a0a9c0' : '#666'
       }}>
-        📈 Loading equity curve...
+        📈 {loading ? '加载资金曲线中...' : '暂无数据'}
       </div>
     );
   }
@@ -75,7 +67,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
       color: isDark ? '#a0a9c0' : '#666666',
     },
     xaxis: {
-      title: 'Date',
+      title: '日期',
       gridcolor: isDark ? '#3a4553' : '#e0e0e0',
       zerolinecolor: isDark ? '#3a4553' : '#e0e0e0',
       tickfont: {
@@ -83,7 +75,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
       },
     },
     yaxis: {
-      title: 'Portfolio Value',
+      title: '资金价值',
       gridcolor: isDark ? '#3a4553' : '#e0e0e0',
       zerolinecolor: isDark ? '#3a4553' : '#e0e0e0',
       tickfont: {

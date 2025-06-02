@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NagaFlow 测试页面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .status {
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 255, 136, 0.2);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        .info {
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(0, 212, 255, 0.8);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .button:hover {
+            background: rgba(0, 212, 255, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 NagaFlow 前端测试</h1>
+        
+        <div class="status">
+            ✅ 静态页面加载成功
+        </div>
+        
+        <div class="info">
+            <strong>当前时间:</strong> <span id="current-time"></span>
+        </div>
+        
+        <div class="info">
+            <strong>浏览器:</strong> <span id="browser-info"></span>
+        </div>
+        
+        <div class="info">
+            <strong>页面地址:</strong> <span id="page-url"></span>
+        </div>
+        
+        <button class="button" onclick="testReactApp()">测试 React 应用</button>
+        <button class="button" onclick="checkConsole()">检查控制台</button>
+        
+        <div id="test-results" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        // 更新当前时间
+        function updateTime() {
+            document.getElementById('current-time').textContent = new Date().toLocaleString('zh-CN');
+        }
+        
+        // 显示浏览器信息
+        document.getElementById('browser-info').textContent = navigator.userAgent.split(' ').slice(-2).join(' ');
+        
+        // 显示页面URL
+        document.getElementById('page-url').textContent = window.location.href;
+        
+        // 测试React应用
+        function testReactApp() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<div style="color: #ffa726;">正在测试 React 应用...</div>';
+            
+            // 尝试加载主页
+            fetch('/')
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                })
+                .then(html => {
+                    if (html.includes('root')) {
+                        results.innerHTML = '<div style="color: #00ff88;">✅ React 应用 HTML 结构正常</div>';
+                    } else {
+                        results.innerHTML = '<div style="color: #ff4757;">❌ React 应用 HTML 结构异常</div>';
+                    }
+                })
+                .catch(error => {
+                    results.innerHTML = `<div style="color: #ff4757;">❌ React 应用加载失败: ${error.message}</div>`;
+                });
+        }
+        
+        // 检查控制台
+        function checkConsole() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = `
+                <div style="color: #00d4ff;">
+                    <p>📋 请检查浏览器控制台 (F12):</p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>是否有 JavaScript 错误</li>
+                        <li>是否有网络请求失败</li>
+                        <li>是否有模块加载问题</li>
+                        <li>是否有 React 相关错误</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // 初始化
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // 自动测试
+        setTimeout(testReactApp, 1000);
+    </script>
+</body>
+</html>

@@ -1,19 +1,22 @@
 """
 数据管理API路由
-集成bn_data模块功能
+使用本地预处理数据，替代bn_data模块
 """
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 import asyncio
 import sys
 import os
+import logging
+import pandas as pd
+from datetime import datetime
 
-# 导入现有的bn_data模块
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'bn_data'))
-from core.symbols import async_get_usdt_symbols, async_get_usdt_symbols_async, spot_symbols_filter
-from core.common import ping
-# Note: bn_data_run import removed to avoid circular import
+# 导入新的数据服务
+from ..services.data_adapter import data_adapter
+from ..services.local_data_manager import local_data_manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -39,18 +42,19 @@ class DataStatus(BaseModel):
 data_status = DataStatus(status="idle", message="Ready to download data")
 
 @router.get("/symbols", response_model=List[SymbolInfo])
-async def get_symbols(trade_type: str = "swap"):
+async def get_symbols(trade_type: str = "spot"):
     """获取可用的交易对列表"""
     try:
-        params = {
-            'delimiter': '/',
-            'prefix': 'data/futures/um/daily/klines/' if trade_type == 'swap' else 'data/spot/daily/klines/'
-        }
-        # 使用异步版本避免事件循环冲突
-        symbols = await async_get_usdt_symbols_async(params)
+        logger.info(f"📊 获取交易对列表，市场类型: {trade_type}")
 
-        if trade_type == 'spot':
-            symbols = spot_symbols_filter(symbols)
+        # 使用新的数据适配器获取交易对
+        symbols = await data_adapter.get_usdt_symbols_async()
+
+        # 根据市场类型过滤
+        if trade_type == "spot":
+            symbols = data_adapter.spot_symbols_filter(symbols)
+
+        logger.info(f"✅ 获取到 {len(symbols)} 个 {trade_type} 交易对")
 
         symbol_list = []
         for symbol in symbols:
@@ -61,6 +65,7 @@ async def get_symbols(trade_type: str = "swap"):
 
         return symbol_list
     except Exception as e:
+        logger.error(f"❌ 获取交易对列表失败: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get symbols: {str(e)}")
 
 @router.get("/status", response_model=DataStatus)
@@ -122,20 +127,58 @@ async def run_data_download(request: DataDownloadRequest):
 async def get_market_data(
     symbol: str,
     interval: str = "1H",
-    limit: int = 1000
+    limit: int = 1000,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
 ):
     """获取特定币种的市场数据"""
     try:
-        # 这里需要实现从pickle文件读取数据的逻辑
-        # 可以复用crypto_cta中的数据读取代码
+        logger.info(f"🔍 获取市场数据: {symbol}, 周期: {interval}, 限制: {limit}")
 
+        # 使用数据适配器获取数据
+        df = data_adapter.get_symbol_data_for_backtest(symbol, start_date, end_date, interval)
+
+        if df is None or df.empty:
+            return {
+                "symbol": symbol,
+                "interval": interval,
+                "data": [],
+                "message": f"No data found for {symbol}",
+                "status": "no_data"
+            }
+
+        # 限制返回数据量
+        if limit > 0:
+            df = df.tail(limit)  # 获取最新的数据
+
+        # 转换为API返回格式
+        data_list = []
+        for _, row in df.iterrows():
+            try:
+                record = {
+                    "timestamp": row['candle_begin_time'].isoformat() if pd.notna(row['candle_begin_time']) else None,
+                    "open": float(row['open']) if pd.notna(row['open']) else 0.0,
+                    "high": float(row['high']) if pd.notna(row['high']) else 0.0,
+                    "low": float(row['low']) if pd.notna(row['low']) else 0.0,
+                    "close": float(row['close']) if pd.notna(row['close']) else 0.0,
+                    "volume": float(row['volume']) if pd.notna(row['volume']) else 0.0,
+                }
+                data_list.append(record)
+            except Exception as e:
+                logger.warning(f"⚠️ 跳过无效数据行: {e}")
+                continue
+
+        logger.info(f"✅ 成功获取 {len(data_list)} 条市场数据")
         return {
             "symbol": symbol,
             "interval": interval,
-            "data": [],  # 实际的K线数据
-            "message": f"Market data for {symbol} (placeholder)"
+            "data": data_list,
+            "message": f"Successfully loaded {len(data_list)} records for {symbol}",
+            "status": "success"
         }
+
     except Exception as e:
+        logger.error(f"❌ 获取市场数据失败: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get market data: {str(e)}")
 
 @router.delete("/cache")
@@ -146,3 +189,73 @@ async def clear_data_cache():
         return {"message": "Data cache cleared successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+
+
+@router.get("/data-status")
+async def get_data_status_summary():
+    """获取本地数据状态摘要"""
+    try:
+        logger.info("📊 获取数据状态摘要")
+
+        # 使用数据适配器获取状态
+        status = data_adapter.get_data_status_summary()
+
+        logger.info(f"✅ 数据状态: {status['status']}")
+        return status
+
+    except Exception as e:
+        logger.error(f"❌ 获取数据状态失败: {e}")
+        return {
+            "data_source": "本地预处理数据",
+            "status": "error",
+            "error": str(e),
+            "last_updated": datetime.now().isoformat()
+        }
+
+@router.get("/data-availability")
+async def check_data_availability(
+    symbols: str,  # 逗号分隔的交易对列表
+    start_date: str,
+    end_date: str,
+    min_records: int = 1000
+):
+    """检查数据可用性"""
+    try:
+        symbol_list = [s.strip() for s in symbols.split(',')]
+        logger.info(f"🔍 检查数据可用性: {symbol_list}, {start_date} - {end_date}")
+
+        # 使用数据适配器检查可用性
+        availability = data_adapter.check_data_availability_for_backtest(
+            symbol_list, start_date, end_date, min_records
+        )
+
+        logger.info(f"✅ 可用交易对: {len(availability['available_symbols'])}/{len(symbol_list)}")
+        return availability
+
+    except Exception as e:
+        logger.error(f"❌ 检查数据可用性失败: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to check data availability: {str(e)}")
+
+@router.get("/intelligent-time-range")
+async def get_intelligent_time_range(
+    symbols: str,  # 逗号分隔的交易对列表
+    requested_start: str,
+    requested_end: str,
+    min_records: int = 1000
+):
+    """获取智能时间范围建议"""
+    try:
+        symbol_list = [s.strip() for s in symbols.split(',')]
+        logger.info(f"🧠 获取智能时间范围: {symbol_list}, {requested_start} - {requested_end}")
+
+        # 使用数据适配器获取智能时间范围
+        time_range_info = data_adapter.get_intelligent_time_range_for_backtest(
+            symbol_list, requested_start, requested_end, min_records
+        )
+
+        logger.info(f"✅ 时间范围优化: {time_range_info['success']}")
+        return time_range_info
+
+    except Exception as e:
+        logger.error(f"❌ 获取智能时间范围失败: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get intelligent time range: {str(e)}")

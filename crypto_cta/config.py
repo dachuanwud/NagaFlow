@@ -36,9 +36,9 @@ del_mode = True
 cover_curve = False
 
 # 最小下单量
-min_amount_df = pd.read_csv(os.path.join(root_path, '最小下单量.csv'), encoding='gbk')
+min_amount_df = pd.read_csv(os.path.join(root_path, '最小下单量.csv'), encoding='utf-8')
 min_amount_dict = {}
 for i in min_amount_df.index:
-    min_amount_dict[min_amount_df.at[i, '合约']] = min_amount_df.at[i, '最小下单量']
+    min_amount_dict[min_amount_df.at[i, 'contract']] = min_amount_df.at[i, 'min_amount']
 
 head_column = ['candle_begin_time', 'open', 'high', 'low', 'close', 'volume', 'quote_volume', 'trade_num', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'offset', 'kline_pct']

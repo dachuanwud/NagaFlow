@@ -142,6 +142,15 @@ export interface BacktestResult {
   monthly_returns: MonthlyReturn[];
   trade_records: TradeRecord[];
   created_at: string;
+
+  // 新增：时间范围相关字段
+  requested_date_start?: string;  // 用户请求的开始时间
+  requested_date_end?: string;    // 用户请求的结束时间
+  actual_date_start?: string;     // 实际使用的开始时间
+  actual_date_end?: string;       // 实际使用的结束时间
+  data_records_count?: number;    // 实际使用的数据条数
+  time_range_match_status?: string;  // 时间范围匹配状态
+  time_range_adjustment_reason?: string;  // 时间范围调整原因
 }
 
 export interface BacktestStatus {
@@ -154,21 +163,77 @@ export interface BacktestStatus {
   results: BacktestResult[];
 }
 
+// 新增：数据时间范围接口
+export interface DataTimeRange {
+  symbol: string;
+  available: boolean;
+  message: string;
+  start_date: string | null;
+  end_date: string | null;
+  total_records: number;
+  price_range?: {
+    min: number | null;
+    max: number | null;
+  };
+  // 新增：数据质量评估字段
+  quality_score?: 'high' | 'medium' | 'low' | 'unavailable' | 'auto_fetch';
+  recommended?: boolean;
+  quality_message?: string;
+  auto_fetch_available?: boolean;
+  // 兼容后端返回的其他字段
+  records_count?: number;
+  time_range?: {
+    start: string;
+    end: string;
+  };
+  data_source?: string;
+}
+
+// 新增：可用交易对响应接口
+export interface AvailableSymbolsResponse {
+  symbols: string[];
+  message: string;
+  total_count: number;
+}
+
 export interface Strategy {
   id: string;
   name: string;
   description: string;
+  factors: string[];
   parameters: Record<string, any>;
   created_at: string;
   updated_at: string;
   is_active: boolean;
 }
 
+export interface ParameterConstraint {
+  min_value?: number;
+  max_value?: number;
+  step?: number;
+  options?: any[];
+  default: any;
+  required: boolean;
+}
+
+export interface ParameterDefinition {
+  name: string;
+  display_name: string;
+  description: string;
+  type: 'integer' | 'float' | 'boolean' | 'string' | 'list' | 'range';
+  constraint: ParameterConstraint;
+  group?: string;
+  order: number;
+}
+
 export interface FactorInfo {
   name: string;
+  display_name: string;
   description: string;
-  parameters: string[];
+  category: string;
+  parameters: ParameterDefinition[];
   file_path: string;
+  is_active: boolean;
 }
 
 // 数据管理API
@@ -212,6 +277,31 @@ export const backtestApi = {
 
   deleteTask: (taskId: string) =>
     api.delete(`/backtest/tasks/${taskId}`),
+
+  // 新增：获取数据时间范围
+  getDataTimeRange: (symbol: string): Promise<DataTimeRange> =>
+    api.get(`/backtest/data-range/${symbol}`),
+
+  // 新增：获取可用交易对
+  getAvailableSymbols: (): Promise<AvailableSymbolsResponse> =>
+    api.get('/backtest/available-symbols'),
+
+  // 新增：数据预处理
+  prepareData: (data: {
+    symbols: string[];
+    date_start: string;
+    date_end: string;
+    rule_type?: string;
+  }) =>
+    api.post('/backtest/prepare-data', data),
+
+  // 新增：按需数据准备
+  prepareDataOnDemand: (data: BacktestRequest) =>
+    api.post('/backtest/prepare-data-on-demand', data),
+
+  // 新增：自动数据回测
+  runBacktestWithAutoData: (data: BacktestRequest) =>
+    api.post('/backtest/run-with-auto-data', data),
 };
 
 // 策略管理API
@@ -225,6 +315,7 @@ export const strategiesApi = {
   createStrategy: (data: {
     name: string;
     description: string;
+    factors: string[];
     parameters: Record<string, any>;
   }): Promise<Strategy> =>
     api.post('/strategies/', data),
@@ -232,6 +323,7 @@ export const strategiesApi = {
   updateStrategy: (id: string, data: {
     name?: string;
     description?: string;
+    factors?: string[];
     parameters?: Record<string, any>;
     is_active?: boolean;
   }): Promise<Strategy> =>
@@ -242,6 +334,15 @@ export const strategiesApi = {
 
   listFactors: (): Promise<FactorInfo[]> =>
     api.get('/strategies/factors'),
+
+  getFactorInfo: (factorName: string): Promise<FactorInfo> =>
+    api.get(`/strategies/factors/${factorName}`),
+
+  validateFactorParameters: (factorName: string, parameters: Record<string, any>) =>
+    api.post(`/strategies/factors/${factorName}/validate`, parameters),
+
+  getFactorCategories: (): Promise<{ categories: string[] }> =>
+    api.get('/strategies/factors/categories'),
 
   validateStrategy: (id: string) =>
     api.get(`/strategies/${id}/validate`),

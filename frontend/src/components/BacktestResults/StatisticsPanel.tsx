@@ -1,9 +1,9 @@
 import React from 'react';
-import { Card, Row, Col, Statistic, Tooltip, Progress } from 'antd';
-import { 
-  TrophyOutlined, 
-  RiseOutlined, 
-  FallOutlined, 
+import { Card, Row, Col, Statistic, Tooltip, Progress, Typography, Space } from 'antd';
+import {
+  TrophyOutlined,
+  RiseOutlined,
+  FallOutlined,
   BarChartOutlined,
   DollarOutlined,
   ThunderboltOutlined,
@@ -11,18 +11,26 @@ import {
   PercentageOutlined
 } from '@ant-design/icons';
 import { useThemeStore } from '../../stores/themeStore';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useTheme } from '../../hooks/useTheme';
 import { BacktestResult } from '../../services/api';
+import { motion } from 'framer-motion';
+import { CardContainer } from '../UI/Container';
+
+const { Title, Text } = Typography;
 
 interface StatisticsPanelProps {
   results: BacktestResult[];
   loading?: boolean;
 }
 
-export const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ 
-  results, 
-  loading = false 
+export const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
+  results,
+  loading = false
 }) => {
   const { isDark } = useThemeStore();
+  const { isMobile, isTablet } = useResponsive();
+  const { colors, getCardStyle, getStatusColor, tokens } = useTheme();
 
   // 计算综合统计指标
   const calculateStats = () => {
@@ -71,7 +79,7 @@ export const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
 
   const getValueColor = (value: number, isPositive: boolean = true) => {
     if (value === 0) return isDark ? '#a0a9c0' : '#666666';
-    return isPositive 
+    return isPositive
       ? (value > 0 ? '#00ff88' : '#ff4757')
       : (value > 0 ? '#ff4757' : '#00ff88');
   };
@@ -79,283 +87,319 @@ export const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
   const formatPercentage = (value: number) => `${(value * 100).toFixed(2)}%`;
   const formatNumber = (value: number, decimals: number = 2) => value.toFixed(decimals);
 
+  // 响应式列配置
+  const getColSpan = () => {
+    if (isMobile) {
+      return { xs: 12, sm: 12, md: 8, lg: 6 };
+    } else if (isTablet) {
+      return { xs: 12, sm: 8, md: 6, lg: 6 };
+    } else {
+      return { xs: 24, sm: 12, md: 8, lg: 6 };
+    }
+  };
+
+  const colSpan = getColSpan();
+
+  // 动画配置
+  const cardVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 }
+  };
+
+  const staggerContainer = {
+    animate: {
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
   return (
-    <div style={{ width: '100%' }}>
-      <Row gutter={[16, 16]}>
-        {/* 收益指标 */}
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                  <DollarOutlined style={{ marginRight: 4 }} />
-                  总收益率
-                </span>
-              }
-              value={stats.totalReturn}
-              precision={2}
-              suffix="%"
-              valueStyle={{ 
-                color: getValueColor(stats.totalReturn),
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-              prefix={stats.totalReturn > 0 ? <RiseOutlined /> : <FallOutlined />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                  <BarChartOutlined style={{ marginRight: 4 }} />
-                  年化收益率
-                </span>
-              }
-              value={stats.annualReturn}
-              precision={2}
-              suffix="%"
-              valueStyle={{ 
-                color: getValueColor(stats.annualReturn),
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                  <FallOutlined style={{ marginRight: 4 }} />
-                  最大回撤
-                </span>
-              }
-              value={stats.maxDrawdown}
-              precision={2}
-              suffix="%"
-              valueStyle={{ 
-                color: '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                  <TrophyOutlined style={{ marginRight: 4 }} />
-                  夏普比率
-                </span>
-              }
-              value={stats.sharpeRatio}
-              precision={2}
-              valueStyle={{ 
-                color: stats.sharpeRatio > 1 ? '#00ff88' : stats.sharpeRatio > 0 ? '#00d4ff' : '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
-        </Col>
-
-        {/* 风险指标 */}
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <Tooltip title="Sortino比率衡量下行风险调整后的收益">
-                  <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                    <ThunderboltOutlined style={{ marginRight: 4 }} />
-                    Sortino比率
-                    <InfoCircleOutlined style={{ marginLeft: 4, fontSize: '12px' }} />
-                  </span>
-                </Tooltip>
-              }
-              value={stats.sortinoRatio}
-              precision={2}
-              valueStyle={{ 
-                color: stats.sortinoRatio > 1 ? '#00ff88' : stats.sortinoRatio > 0 ? '#00d4ff' : '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <Tooltip title="Calmar比率 = 年化收益率 / 最大回撤">
-                  <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                    <PercentageOutlined style={{ marginRight: 4 }} />
-                    Calmar比率
-                    <InfoCircleOutlined style={{ marginLeft: 4, fontSize: '12px' }} />
-                  </span>
-                </Tooltip>
-              }
-              value={stats.calmarRatio}
-              precision={2}
-              valueStyle={{ 
-                color: stats.calmarRatio > 1 ? '#00ff88' : stats.calmarRatio > 0 ? '#00d4ff' : '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
+    <motion.div
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      style={{ width: '100%' }}
+    >
+      {/* 标题区域 */}
+      <motion.div variants={cardVariants}>
+        <CardContainer shadow="sm" padding="md" style={{ marginBottom: '24px' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
             <div>
-              <div style={{ 
-                color: isDark ? '#a0a9c0' : '#666666',
-                fontSize: '14px',
-                marginBottom: '8px'
+              <Title level={3} style={{
+                margin: 0,
+                color: colors.text.primary,
+                fontSize: isMobile ? '18px' : '20px'
               }}>
-                <TrophyOutlined style={{ marginRight: 4 }} />
-                胜率
-              </div>
-              <div style={{ 
-                color: stats.winRate > 0.5 ? '#00ff88' : '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-                marginBottom: '8px'
-              }}>
-                {formatPercentage(stats.winRate)}
-              </div>
-              <Progress
-                percent={stats.winRate * 100}
-                showInfo={false}
-                strokeColor={stats.winRate > 0.5 ? '#00ff88' : '#ff4757'}
-                trailColor={isDark ? '#3a4553' : '#f0f0f0'}
-                size="small"
-              />
+                <TrophyOutlined style={{ marginRight: '8px', color: getStatusColor('info') }} />
+                策略表现概览
+              </Title>
+              <Text type="secondary" style={{ fontSize: '14px' }}>
+                基于 {results.length} 个回测结果的综合分析
+              </Text>
             </div>
-          </Card>
+            {!loading && results.length > 0 && (
+              <div style={{ textAlign: 'right' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  最佳策略收益率
+                </Text>
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: stats.totalReturn > 0 ? getStatusColor('success') : getStatusColor('error')
+                }}>
+                  {stats.totalReturn > 0 ? '+' : ''}{(stats.totalReturn * 100).toFixed(2)}%
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContainer>
+      </motion.div>
+
+      {/* 统计指标卡片 */}
+      <Row gutter={[16, 16]}>
+        {/* 总收益率 */}
+        <Col {...colSpan}>
+          <motion.div variants={cardVariants}>
+            <CardContainer shadow="sm" padding="md" hover>
+              <Statistic
+                title={
+                  <Space>
+                    <DollarOutlined style={{ color: getStatusColor('info') }} />
+                    <span style={{ color: colors.text.secondary }}>总收益率</span>
+                    <Tooltip title="所有策略的平均总收益率">
+                      <InfoCircleOutlined style={{ color: colors.text.tertiary }} />
+                    </Tooltip>
+                  </Space>
+                }
+                value={stats.totalReturn * 100}
+                precision={2}
+                suffix="%"
+                valueStyle={{
+                  color: getValueColor(stats.totalReturn),
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: 600,
+                }}
+                prefix={stats.totalReturn > 0 ?
+                  <RiseOutlined style={{ color: getStatusColor('success') }} /> :
+                  <FallOutlined style={{ color: getStatusColor('error') }} />
+                }
+                loading={loading}
+              />
+            </CardContainer>
+          </motion.div>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <Tooltip title="盈利因子 = 总盈利 / 总亏损">
-                  <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                    <DollarOutlined style={{ marginRight: 4 }} />
-                    盈利因子
-                    <InfoCircleOutlined style={{ marginLeft: 4, fontSize: '12px' }} />
+        {/* 年化收益率 */}
+        <Col {...colSpan}>
+          <motion.div variants={cardVariants}>
+            <CardContainer shadow="sm" padding="md" hover>
+              <Statistic
+                title={
+                  <Space>
+                    <BarChartOutlined style={{ color: getStatusColor('info') }} />
+                    <span style={{ color: colors.text.secondary }}>年化收益率</span>
+                    <Tooltip title="年化收益率反映策略的长期盈利能力">
+                      <InfoCircleOutlined style={{ color: colors.text.tertiary }} />
+                    </Tooltip>
+                  </Space>
+                }
+                value={stats.annualReturn * 100}
+                precision={2}
+                suffix="%"
+                valueStyle={{
+                  color: getValueColor(stats.annualReturn),
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: 600,
+                }}
+                loading={loading}
+              />
+            </CardContainer>
+          </motion.div>
+        </Col>
+
+        {/* 最大回撤 */}
+        <Col {...colSpan}>
+          <motion.div variants={cardVariants}>
+            <CardContainer shadow="sm" padding="md" hover>
+              <Statistic
+                title={
+                  <Space>
+                    <FallOutlined style={{ color: getStatusColor('error') }} />
+                    <span style={{ color: colors.text.secondary }}>最大回撤</span>
+                    <Tooltip title="最大回撤反映策略的风险控制能力">
+                      <InfoCircleOutlined style={{ color: colors.text.tertiary }} />
+                    </Tooltip>
+                  </Space>
+                }
+                value={Math.abs(stats.maxDrawdown * 100)}
+                precision={2}
+                suffix="%"
+                valueStyle={{
+                  color: getStatusColor('error'),
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: 600,
+                }}
+                loading={loading}
+              />
+              {!loading && (
+                <Progress
+                  percent={Math.min(Math.abs(stats.maxDrawdown * 100), 100)}
+                  strokeColor={getStatusColor('error')}
+                  trailColor={colors.border.secondary}
+                  showInfo={false}
+                  size="small"
+                  style={{ marginTop: '8px' }}
+                />
+              )}
+            </CardContainer>
+          </motion.div>
+        </Col>
+
+        {/* 夏普比率 */}
+        <Col {...colSpan}>
+          <motion.div variants={cardVariants}>
+            <CardContainer shadow="sm" padding="md" hover>
+              <Statistic
+                title={
+                  <Space>
+                    <TrophyOutlined style={{ color: getStatusColor('warning') }} />
+                    <span style={{ color: colors.text.secondary }}>夏普比率</span>
+                    <Tooltip title="夏普比率衡量风险调整后的收益">
+                      <InfoCircleOutlined style={{ color: colors.text.tertiary }} />
+                    </Tooltip>
+                  </Space>
+                }
+                value={stats.sharpeRatio}
+                precision={2}
+                valueStyle={{
+                  color: stats.sharpeRatio > 1 ? getStatusColor('success') :
+                         stats.sharpeRatio > 0 ? getStatusColor('info') : getStatusColor('error'),
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: 600,
+                }}
+                loading={loading}
+              />
+              {!loading && (
+                <div style={{ marginTop: '8px' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    {stats.sharpeRatio > 1 ? '优秀' :
+                     stats.sharpeRatio > 0.5 ? '良好' :
+                     stats.sharpeRatio > 0 ? '一般' : '较差'}
+                  </Text>
+                </div>
+              )}
+            </CardContainer>
+          </motion.div>
+        </Col>
+
+        {/* 胜率 */}
+        <Col {...colSpan}>
+          <motion.div variants={cardVariants}>
+            <CardContainer shadow="sm" padding="md" hover>
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '8px'
+                }}>
+                  <TrophyOutlined style={{
+                    color: getStatusColor('success'),
+                    marginRight: '8px'
+                  }} />
+                  <span style={{
+                    color: colors.text.secondary,
+                    fontSize: '14px'
+                  }}>
+                    胜率
                   </span>
-                </Tooltip>
-              }
-              value={stats.profitFactor}
-              precision={2}
-              valueStyle={{ 
-                color: stats.profitFactor > 1 ? '#00ff88' : '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
+                  <Tooltip title="盈利交易占总交易的比例">
+                    <InfoCircleOutlined style={{
+                      color: colors.text.tertiary,
+                      marginLeft: '4px',
+                      fontSize: '12px'
+                    }} />
+                  </Tooltip>
+                </div>
+                <div style={{
+                  color: stats.winRate > 0.5 ? getStatusColor('success') : getStatusColor('error'),
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: 600,
+                  marginBottom: '8px'
+                }}>
+                  {formatPercentage(stats.winRate)}
+                </div>
+                <Progress
+                  percent={stats.winRate * 100}
+                  showInfo={false}
+                  strokeColor={stats.winRate > 0.5 ? getStatusColor('success') : getStatusColor('error')}
+                  trailColor={colors.border.secondary}
+                  size="small"
+                />
+              </div>
+            </CardContainer>
+          </motion.div>
         </Col>
 
-        {/* 交易统计 */}
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                  <BarChartOutlined style={{ marginRight: 4 }} />
-                  总交易次数
-                </span>
-              }
-              value={stats.totalTrades}
-              valueStyle={{ 
-                color: '#00d4ff',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
+        {/* 总交易次数 */}
+        <Col {...colSpan}>
+          <motion.div variants={cardVariants}>
+            <CardContainer shadow="sm" padding="md" hover>
+              <Statistic
+                title={
+                  <Space>
+                    <BarChartOutlined style={{ color: getStatusColor('info') }} />
+                    <span style={{ color: colors.text.secondary }}>总交易次数</span>
+                  </Space>
+                }
+                value={stats.totalTrades}
+                valueStyle={{
+                  color: getStatusColor('info'),
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: 600,
+                }}
+                loading={loading}
+              />
+            </CardContainer>
+          </motion.div>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                  <ThunderboltOutlined style={{ marginRight: 4 }} />
-                  波动率
-                </span>
-              }
-              value={stats.volatility}
-              precision={2}
-              suffix="%"
-              valueStyle={{ 
-                color: '#00d4ff',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
+        {/* 波动率 */}
+        <Col {...colSpan}>
+          <motion.div variants={cardVariants}>
+            <CardContainer shadow="sm" padding="md" hover>
+              <Statistic
+                title={
+                  <Space>
+                    <ThunderboltOutlined style={{ color: getStatusColor('warning') }} />
+                    <span style={{ color: colors.text.secondary }}>波动率</span>
+                    <Tooltip title="收益率的标准差，反映策略的稳定性">
+                      <InfoCircleOutlined style={{ color: colors.text.tertiary }} />
+                    </Tooltip>
+                  </Space>
+                }
+                value={stats.volatility * 100}
+                precision={2}
+                suffix="%"
+                valueStyle={{
+                  color: getStatusColor('warning'),
+                  fontSize: isMobile ? '18px' : '20px',
+                  fontWeight: 600,
+                }}
+                loading={loading}
+              />
+            </CardContainer>
+          </motion.div>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <Tooltip title="95%置信度下的风险价值">
-                  <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                    <FallOutlined style={{ marginRight: 4 }} />
-                    VaR (95%)
-                    <InfoCircleOutlined style={{ marginLeft: 4, fontSize: '12px' }} />
-                  </span>
-                </Tooltip>
-              }
-              value={stats.var95}
-              precision={2}
-              suffix="%"
-              valueStyle={{ 
-                color: '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle} loading={loading}>
-            <Statistic
-              title={
-                <Tooltip title="95%置信度下的条件风险价值">
-                  <span style={{ color: isDark ? '#a0a9c0' : '#666666' }}>
-                    <FallOutlined style={{ marginRight: 4 }} />
-                    CVaR (95%)
-                    <InfoCircleOutlined style={{ marginLeft: 4, fontSize: '12px' }} />
-                  </span>
-                </Tooltip>
-              }
-              value={stats.cvar95}
-              precision={2}
-              suffix="%"
-              valueStyle={{ 
-                color: '#ff4757',
-                fontSize: '20px',
-                fontWeight: 600,
-              }}
-            />
-          </Card>
-        </Col>
       </Row>
-    </div>
+    </motion.div>
   );
 };

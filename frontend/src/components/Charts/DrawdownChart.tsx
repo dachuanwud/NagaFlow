@@ -14,24 +14,15 @@ interface DrawdownChartProps {
   loading?: boolean;
 }
 
-export const DrawdownChart: React.FC<DrawdownChartProps> = ({ 
-  data, 
-  height = 400, 
+export const DrawdownChart: React.FC<DrawdownChartProps> = ({
+  data,
+  height = 400,
   title = "回撤曲线",
   loading = false
 }) => {
   const { isDark } = useThemeStore();
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading || isLoading || !data) {
+  if (loading || !data) {
     return (
       <div style={{
         height,
@@ -45,7 +36,7 @@ export const DrawdownChart: React.FC<DrawdownChartProps> = ({
         gap: '12px'
       }}>
         <Spin size="large" />
-        <span>📉 加载回撤数据中...</span>
+        <span>📉 {loading ? '加载回撤数据中...' : '暂无回撤数据'}</span>
       </div>
     );
   }
@@ -157,8 +148,8 @@ export const DrawdownChart: React.FC<DrawdownChartProps> = ({
   };
 
   return (
-    <div style={{ 
-      width: '100%', 
+    <div style={{
+      width: '100%',
       height,
       borderRadius: '8px',
       overflow: 'hidden',

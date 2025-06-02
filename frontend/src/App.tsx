@@ -10,6 +10,7 @@ import { Dashboard } from './pages/Dashboard';
 import { DataManagement } from './pages/DataManagement';
 import { BacktestPage } from './pages/BacktestPage';
 import { BacktestPageDebug } from './pages/BacktestPage/debug';
+import { TestSubmitPage } from './pages/BacktestPage/test-submit';
 import { StrategyManagement } from './pages/StrategyManagement';
 import { Results } from './pages/Results';
 import { useThemeStore } from './stores/themeStore';
@@ -32,6 +33,7 @@ const AnimatedRoutes: React.FC = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/data" element={<DataManagement />} />
         <Route path="/backtest" element={<BacktestPage />} />
+        <Route path="/backtest-test" element={<TestSubmitPage />} />
         <Route path="/strategies" element={<StrategyManagement />} />
         <Route path="/results" element={<Results />} />
       </Routes>

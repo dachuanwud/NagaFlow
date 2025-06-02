@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React 测试</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #00d4ff;
+            background: #f0f9ff;
+        }
+        .error {
+            border-left-color: #ff4757;
+            background: #fff0f0;
+        }
+        .success {
+            border-left-color: #00ff88;
+            background: #f0fff4;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        function App() {
+            const [status, setStatus] = useState('正在初始化...');
+            const [tests, setTests] = useState([]);
+            
+            useEffect(() => {
+                runTests();
+            }, []);
+            
+            const runTests = async () => {
+                const testResults = [];
+                
+                // 测试1: React 基础功能
+                try {
+                    testResults.push({
+                        name: 'React 基础功能',
+                        status: 'success',
+                        message: 'React 和 ReactDOM 加载成功'
+                    });
+                } catch (error) {
+                    testResults.push({
+                        name: 'React 基础功能',
+                        status: 'error',
+                        message: error.message
+                    });
+                }
+                
+                // 测试2: 网络连接
+                try {
+                    const response = await fetch('/');
+                    testResults.push({
+                        name: '网络连接测试',
+                        status: response.ok ? 'success' : 'error',
+                        message: `HTTP ${response.status} - ${response.statusText}`
+                    });
+                } catch (error) {
+                    testResults.push({
+                        name: '网络连接测试',
+                        status: 'error',
+                        message: error.message
+                    });
+                }
+                
+                // 测试3: 本地存储
+                try {
+                    localStorage.setItem('test', 'value');
+                    const value = localStorage.getItem('test');
+                    localStorage.removeItem('test');
+                    testResults.push({
+                        name: '本地存储测试',
+                        status: value === 'value' ? 'success' : 'error',
+                        message: value === 'value' ? '本地存储正常' : '本地存储异常'
+                    });
+                } catch (error) {
+                    testResults.push({
+                        name: '本地存储测试',
+                        status: 'error',
+                        message: error.message
+                    });
+                }
+                
+                setTests(testResults);
+                setStatus('测试完成');
+            };
+            
+            return (
+                <div className="container">
+                    <h1>🔧 NagaFlow 前端诊断工具</h1>
+                    
+                    <div className="status">
+                        <strong>状态:</strong> {status}
+                    </div>
+                    
+                    <div className="status">
+                        <strong>当前时间:</strong> {new Date().toLocaleString('zh-CN')}
+                    </div>
+                    
+                    <div className="status">
+                        <strong>用户代理:</strong> {navigator.userAgent}
+                    </div>
+                    
+                    <h2>测试结果</h2>
+                    {tests.map((test, index) => (
+                        <div key={index} className={`status ${test.status}`}>
+                            <strong>{test.name}:</strong> {test.message}
+                        </div>
+                    ))}
+                    
+                    <h2>环境信息</h2>
+                    <div className="status">
+                        <strong>React 版本:</strong> {React.version}
+                    </div>
+                    <div className="status">
+                        <strong>页面协议:</strong> {window.location.protocol}
+                    </div>
+                    <div className="status">
+                        <strong>页面主机:</strong> {window.location.host}
+                    </div>
+                    <div className="status">
+                        <strong>页面路径:</strong> {window.location.pathname}
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

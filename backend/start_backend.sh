@@ -13,5 +13,10 @@ if [ ! -d "venv" ]; then
 fi
 
 # 设置环境变量并启动服务器
-echo "📡 启动服务器在 http://localhost:8000"
-PYTHONPATH=./venv/lib/python3.13/site-packages /opt/homebrew/bin/python3 main.py
+echo "📡 启动服务器..."
+echo "🌐 API文档: http://localhost:8004/docs"
+echo "🔗 健康检查: http://localhost:8004/health"
+echo ""
+
+# 设置完整的PYTHONPATH包含所有必要的模块
+PYTHONPATH="/Users/lishechuan/Downloads/NagaFlow/backend/venv/lib/python3.13/site-packages:/Users/lishechuan/Downloads/NagaFlow/bn_data:/Users/lishechuan/Downloads/NagaFlow/crypto_cta" /opt/homebrew/bin/python3 /Users/lishechuan/Downloads/NagaFlow/backend/main.py
