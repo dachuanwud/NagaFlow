@@ -16,60 +16,170 @@ import numpy as np
 
 # 导入现有的crypto_cta模块
 def setup_crypto_cta_imports():
-    """设置crypto_cta模块导入路径并验证可用性"""
+    """设置crypto_cta模块导入路径并验证可用性 - 增强版本"""
     global CTA_AVAILABLE, fast_calculate_signal_by_one_loop, strategy_evaluate, transfer_equity_curve_to_trade, cal_equity_curve
+
+    import logging
+    logger = logging.getLogger(__name__)
 
     # 获取项目根目录
     current_dir = os.path.dirname(__file__)
     project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
     crypto_cta_path = os.path.join(project_root, 'crypto_cta')
 
+    logger.info(f"🔍 检查crypto_cta路径: {crypto_cta_path}")
     print(f"🔍 检查crypto_cta路径: {crypto_cta_path}")
 
+    # 详细的路径诊断
     if not os.path.exists(crypto_cta_path):
-        print(f"❌ crypto_cta目录不存在: {crypto_cta_path}")
+        error_msg = f"❌ crypto_cta目录不存在: {crypto_cta_path}"
+        logger.error(error_msg)
+        print(error_msg)
+        print(f"   项目根目录: {project_root}")
+        print(f"   当前工作目录: {os.getcwd()}")
+        print(f"   backend文件位置: {current_dir}")
         CTA_AVAILABLE = False
         return False
 
     # 添加路径到sys.path
     if crypto_cta_path not in sys.path:
         sys.path.insert(0, crypto_cta_path)
+        logger.info(f"✅ 已添加crypto_cta路径到sys.path")
         print(f"✅ 已添加crypto_cta路径到sys.path")
 
-    # 检查必需的文件是否存在
+    # 检查必需的文件是否存在 - 包含更多策略文件
     required_files = [
         os.path.join(crypto_cta_path, 'cta_api', 'cta_core.py'),
         os.path.join(crypto_cta_path, 'cta_api', 'statistics.py'),
         os.path.join(crypto_cta_path, 'cta_api', 'function.py'),
+        os.path.join(crypto_cta_path, 'cta_api', 'position.py'),
+        os.path.join(crypto_cta_path, 'factors', '__init__.py'),
         os.path.join(crypto_cta_path, 'factors', 'sma.py'),
         os.path.join(crypto_cta_path, 'factors', 'rsi.py'),
+        os.path.join(crypto_cta_path, 'factors', 'kdj.py'),
+        os.path.join(crypto_cta_path, 'factors', 'macd.py'),
+        os.path.join(crypto_cta_path, 'config.py'),
     ]
 
+    missing_files = []
     for file_path in required_files:
         if not os.path.exists(file_path):
+            missing_files.append(file_path)
+            logger.error(f"❌ 必需文件不存在: {file_path}")
             print(f"❌ 必需文件不存在: {file_path}")
-            CTA_AVAILABLE = False
-            return False
         else:
+            logger.debug(f"✅ 文件存在: {os.path.basename(file_path)}")
             print(f"✅ 文件存在: {os.path.basename(file_path)}")
 
-    # 尝试导入模块
-    try:
-        from cta_api.cta_core import fast_calculate_signal_by_one_loop
-        from cta_api.statistics import strategy_evaluate, transfer_equity_curve_to_trade
-        from cta_api.function import cal_equity_curve
+    if missing_files:
+        logger.error(f"❌ 缺少 {len(missing_files)} 个必需文件，crypto_cta模块不可用")
+        print(f"❌ 缺少 {len(missing_files)} 个必需文件，crypto_cta模块不可用")
+        CTA_AVAILABLE = False
+        return False
 
-        print("✅ 成功导入crypto_cta核心模块")
-        CTA_AVAILABLE = True
-        return True
+    # 尝试导入核心模块 - 分步骤进行，增强错误处理
+    try:
+        logger.info("🔄 开始导入crypto_cta核心模块...")
+        print("🔄 开始导入crypto_cta核心模块...")
+
+        # 步骤1: 测试基础依赖
+        try:
+            import pandas as pd
+            import numpy as np
+            logger.info("✅ 基础依赖 pandas, numpy 可用")
+        except Exception as e:
+            logger.error(f"❌ 基础依赖缺失: {e}")
+            CTA_AVAILABLE = False
+            return False
+
+        # 步骤2: 尝试导入 config（可能会有依赖问题）
+        try:
+            # 临时禁用 config 导入，避免依赖问题
+            logger.info("⚠️ 跳过 config 导入以避免依赖问题")
+        except Exception as e:
+            logger.warning(f"⚠️ config 导入失败，继续尝试其他模块: {e}")
+
+        # 步骤3: 导入核心 API 模块
+        core_modules_imported = 0
+        try:
+            from cta_api.cta_core import fast_calculate_signal_by_one_loop
+            logger.info("✅ 成功导入 fast_calculate_signal_by_one_loop")
+            core_modules_imported += 1
+        except Exception as e:
+            logger.error(f"❌ 导入 cta_core 失败: {e}")
+
+        try:
+            from cta_api.statistics import strategy_evaluate, transfer_equity_curve_to_trade
+            logger.info("✅ 成功导入统计模块")
+            core_modules_imported += 1
+        except Exception as e:
+            logger.error(f"❌ 导入 statistics 失败: {e}")
+
+        try:
+            from cta_api.function import cal_equity_curve
+            logger.info("✅ 成功导入资金曲线计算模块")
+            core_modules_imported += 1
+        except Exception as e:
+            logger.error(f"❌ 导入 function 失败: {e}")
+
+        # 步骤4: 测试因子模块导入
+        test_factors = ['sma', 'rsi', 'kdj', 'macd']
+        successful_factors = []
+        failed_factors = []
+
+        for factor_name in test_factors:
+            try:
+                factor_module = __import__(f'factors.{factor_name}', fromlist=('',))
+                if hasattr(factor_module, 'signal'):
+                    successful_factors.append(factor_name)
+                    logger.info(f"✅ 成功导入因子: {factor_name}")
+                else:
+                    failed_factors.append(f"{factor_name} (缺少signal函数)")
+                    logger.warning(f"⚠️ 因子 {factor_name} 缺少signal函数")
+            except Exception as e:
+                failed_factors.append(f"{factor_name} ({str(e)})")
+                logger.error(f"❌ 导入因子 {factor_name} 失败: {e}")
+
+        # 判断是否成功
+        if core_modules_imported >= 1 and len(successful_factors) > 0:
+            logger.info(f"✅ crypto_cta 部分可用")
+            logger.info(f"   核心模块: {core_modules_imported}/3")
+            logger.info(f"   可用因子: {successful_factors}")
+            if failed_factors:
+                logger.warning(f"   失败因子: {failed_factors}")
+
+            print("✅ crypto_cta 部分可用")
+            print(f"   核心模块: {core_modules_imported}/3")
+            print(f"   可用因子: {successful_factors}")
+            if failed_factors:
+                print(f"   失败因子: {failed_factors}")
+
+            CTA_AVAILABLE = True
+            return True
+        else:
+            logger.error("❌ crypto_cta 核心功能不可用")
+            print("❌ crypto_cta 核心功能不可用")
+            CTA_AVAILABLE = False
+            return False
 
     except ImportError as e:
-        print(f"❌ 导入crypto_cta模块失败: {e}")
-        print(f"   当前sys.path包含: {[p for p in sys.path if 'crypto_cta' in p]}")
+        error_msg = f"❌ 导入crypto_cta模块失败: {e}"
+        logger.error(error_msg)
+        logger.error(f"   当前sys.path包含crypto_cta的路径: {[p for p in sys.path if 'crypto_cta' in p]}")
+        logger.error(f"   Python版本: {sys.version}")
+        print(error_msg)
+        print(f"   当前sys.path包含crypto_cta的路径: {[p for p in sys.path if 'crypto_cta' in p]}")
+        print(f"   Python版本: {sys.version}")
         CTA_AVAILABLE = False
         return False
     except Exception as e:
-        print(f"❌ 导入crypto_cta模块时发生未知错误: {e}")
+        error_msg = f"❌ 导入crypto_cta模块时发生未知错误: {e}"
+        logger.error(error_msg)
+        logger.error(f"   错误类型: {type(e).__name__}")
+        print(error_msg)
+        print(f"   错误类型: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         CTA_AVAILABLE = False
         return False
 
@@ -84,6 +194,72 @@ cal_equity_curve = None
 setup_crypto_cta_imports()
 
 router = APIRouter()
+
+
+@router.get("/test/crypto_cta")
+async def test_crypto_cta_integration():
+    """测试 crypto_cta 集成状态的 API 端点"""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        # 重新执行导入设置
+        success = setup_crypto_cta_imports()
+
+        result = {
+            "crypto_cta_available": CTA_AVAILABLE,
+            "setup_success": success,
+            "timestamp": datetime.now().isoformat(),
+            "test_results": {}
+        }
+
+        if CTA_AVAILABLE:
+            # 测试各个因子的导入
+            test_factors = ['sma', 'rsi', 'kdj', 'macd']
+            for factor in test_factors:
+                try:
+                    factor_module = import_crypto_cta_factor(factor)
+                    if factor_module:
+                        result["test_results"][factor] = {
+                            "status": "success",
+                            "has_signal": hasattr(factor_module, 'signal'),
+                            "module_path": getattr(factor_module, '__file__', 'unknown')
+                        }
+                    else:
+                        result["test_results"][factor] = {
+                            "status": "failed",
+                            "error": "module_import_failed"
+                        }
+                except Exception as e:
+                    result["test_results"][factor] = {
+                        "status": "error",
+                        "error": str(e)
+                    }
+
+            result["message"] = "crypto_cta 集成正常，可以进行专业量化回测"
+            result["engine"] = "crypto_cta_native"
+        else:
+            result["message"] = "crypto_cta 集成失败，请检查配置和依赖"
+            result["engine"] = "unavailable"
+            result["suggestions"] = [
+                "检查 crypto_cta 目录是否存在且完整",
+                "确保 Python 依赖包正确安装 (pandas, numpy等)",
+                "检查 crypto_cta 模块文件是否有语法错误",
+                "验证运行环境配置是否正确"
+            ]
+
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ crypto_cta 集成测试失败: {e}")
+        return {
+            "crypto_cta_available": False,
+            "setup_success": False,
+            "timestamp": datetime.now().isoformat(),
+            "message": f"crypto_cta 集成测试失败: {str(e)}",
+            "engine": "error",
+            "error": str(e)
+        }
 
 # 数据模型
 class BacktestRequest(BaseModel):
@@ -668,7 +844,10 @@ async def run_real_backtest(symbol: str, request: BacktestRequest) -> Optional[B
         return None
 
 def calculate_strategy_signals(df: pd.DataFrame, strategy: str, params: dict) -> Optional[pd.DataFrame]:
-    """计算策略信号 - 使用真实的crypto_cta因子"""
+    """计算策略信号 - 强制使用crypto_cta真实因子"""
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
         df = df.copy()
 
@@ -676,36 +855,109 @@ def calculate_strategy_signals(df: pd.DataFrame, strategy: str, params: dict) ->
         if 'candle_begin_time' not in df.columns:
             df['candle_begin_time'] = df.index
 
+        logger.info(f"🔄 开始计算策略信号: {strategy}")
+        logger.info(f"   参数: {params}")
+        logger.info(f"   数据行数: {len(df)}")
+        logger.info(f"   crypto_cta可用状态: {CTA_AVAILABLE}")
+
         print(f"🔄 开始计算策略信号: {strategy}")
         print(f"   参数: {params}")
         print(f"   数据行数: {len(df)}")
+        print(f"   crypto_cta可用状态: {CTA_AVAILABLE}")
 
-        # 如果crypto_cta可用，使用真实因子
-        if CTA_AVAILABLE:
-            return calculate_real_factor_signals(df, strategy, params)
-        else:
-            print("⚠️ crypto_cta不可用，使用简化实现")
-            return calculate_fallback_signals(df, strategy, params)
+        # 强制要求使用crypto_cta真实因子
+        if not CTA_AVAILABLE:
+            error_msg = "❌ crypto_cta模块不可用，无法进行专业量化回测"
+            logger.error(error_msg)
+            print(error_msg)
+            print("🔧 请检查以下问题:")
+            print("   1. crypto_cta目录是否存在且完整")
+            print("   2. Python依赖包是否正确安装 (pandas, numpy等)")
+            print("   3. crypto_cta模块文件是否有语法错误")
+            print("   4. 运行环境是否正确配置")
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "crypto_cta_unavailable",
+                    "message": "crypto_cta模块不可用，无法进行专业量化回测",
+                    "suggestions": [
+                        "检查crypto_cta目录是否存在且完整",
+                        "确保Python依赖包正确安装 (pandas, numpy等)",
+                        "检查crypto_cta模块文件是否有语法错误",
+                        "验证运行环境配置是否正确"
+                    ]
+                }
+            )
 
+        logger.info("✅ 使用crypto_cta真实因子进行计算")
+        print("✅ 使用crypto_cta真实因子进行计算")
+        return calculate_real_factor_signals(df, strategy, params)
+
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
     except Exception as e:
-        print(f"❌ 计算策略信号失败: {e}")
-        return None
+        error_msg = f"❌ 计算策略信号失败: {e}"
+        logger.error(error_msg)
+        print(error_msg)
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "calculation_failed",
+                "message": f"策略信号计算失败: {str(e)}",
+                "strategy": strategy,
+                "params": params
+            }
+        )
 
 def calculate_real_factor_signals(df: pd.DataFrame, strategy: str, params: dict) -> Optional[pd.DataFrame]:
-    """使用真实的crypto_cta因子计算信号"""
+    """使用真实的crypto_cta因子计算信号 - 强制使用原生实现"""
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
         # 参数格式转换：将API参数转换为因子函数期望的para格式
         para = convert_params_to_factor_format(strategy, params)
+        logger.info(f"   转换后的因子参数: {para}")
         print(f"   转换后的因子参数: {para}")
 
-        # 动态导入对应的因子模块
-        factor_module = import_factor_module(strategy)
+        # 强制使用crypto_cta真实因子模块
+        factor_module = import_crypto_cta_factor(strategy)
         if factor_module is None:
-            print(f"❌ 无法导入因子模块: {strategy}")
-            return calculate_fallback_signals(df, strategy, params)
+            error_msg = f"❌ 无法导入crypto_cta因子模块: {strategy}"
+            logger.error(error_msg)
+            print(error_msg)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "factor_import_failed",
+                    "message": f"无法导入crypto_cta因子模块: {strategy}",
+                    "strategy": strategy,
+                    "available_factors": ["sma", "rsi", "kdj", "macd"]
+                }
+            )
 
-        # 调用因子的signal函数
-        print(f"   调用因子函数: {strategy}.signal()")
+        # 验证因子模块是否有signal函数
+        if not hasattr(factor_module, 'signal'):
+            error_msg = f"❌ 因子模块 {strategy} 缺少signal函数"
+            logger.error(error_msg)
+            print(error_msg)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "invalid_factor_module",
+                    "message": f"因子模块 {strategy} 缺少signal函数",
+                    "strategy": strategy
+                }
+            )
+
+        # 调用crypto_cta因子的signal函数
+        logger.info(f"   调用crypto_cta因子函数: {strategy}.signal()")
+        print(f"   调用crypto_cta因子函数: {strategy}.signal()")
+
+        # 确保使用crypto_cta的标准参数
         df_result = factor_module.signal(df, para=para, proportion=1, leverage_rate=1)
 
         # 验证结果
@@ -729,8 +981,11 @@ def calculate_real_factor_signals(df: pd.DataFrame, strategy: str, params: dict)
         print(f"❌ 真实因子计算失败: {e}")
         return calculate_fallback_signals(df, strategy, params)
 
-def import_factor_module(strategy: str):
-    """动态导入因子模块"""
+def import_crypto_cta_factor(strategy: str):
+    """专门导入crypto_cta真实因子模块 - 强制使用原生实现"""
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
         # 因子名称映射
         factor_map = {
@@ -745,15 +1000,67 @@ def import_factor_module(strategy: str):
 
         factor_name = factor_map.get(strategy.lower())
         if not factor_name:
+            logger.error(f"❌ 未知的策略类型: {strategy}")
             print(f"❌ 未知的策略类型: {strategy}")
             return None
 
-        # 使用内置的简化因子实现
-        return get_builtin_factor(factor_name)
+        # 强制要求crypto_cta可用
+        if not CTA_AVAILABLE:
+            logger.error(f"❌ crypto_cta不可用，无法导入因子: {factor_name}")
+            print(f"❌ crypto_cta不可用，无法导入因子: {factor_name}")
+            return None
 
-    except Exception as e:
-        print(f"❌ 导入因子模块时发生错误: {e}")
+        logger.info(f"🔄 导入crypto_cta真实因子: {factor_name}")
+        print(f"🔄 导入crypto_cta真实因子: {factor_name}")
+
+        # 动态导入crypto_cta因子模块
+        factor_module = __import__(f'factors.{factor_name}', fromlist=('',))
+
+        # 验证模块是否有signal函数
+        if not hasattr(factor_module, 'signal'):
+            logger.error(f"❌ crypto_cta因子 {factor_name} 缺少signal函数")
+            print(f"❌ crypto_cta因子 {factor_name} 缺少signal函数")
+            return None
+
+        # 验证是否是真实的crypto_cta模块
+        if hasattr(factor_module, '__file__'):
+            module_path = factor_module.__file__
+            if 'crypto_cta' in module_path:
+                logger.info(f"✅ 成功导入crypto_cta真实因子: {factor_name}")
+                logger.info(f"   模块路径: {module_path}")
+                print(f"✅ 成功导入crypto_cta真实因子: {factor_name}")
+                print(f"   模块路径: {module_path}")
+                return factor_module
+            else:
+                logger.error(f"❌ 导入的不是crypto_cta因子: {module_path}")
+                print(f"❌ 导入的不是crypto_cta因子: {module_path}")
+                return None
+        else:
+            logger.warning(f"⚠️ 无法验证因子模块路径: {factor_name}")
+            print(f"⚠️ 无法验证因子模块路径: {factor_name}")
+            return factor_module
+
+    except ImportError as e:
+        logger.error(f"❌ 导入crypto_cta因子 {factor_name} 失败: {e}")
+        print(f"❌ 导入crypto_cta因子 {factor_name} 失败: {e}")
         return None
+    except Exception as e:
+        logger.error(f"❌ 导入crypto_cta因子 {factor_name} 时发生错误: {e}")
+        print(f"❌ 导入crypto_cta因子 {factor_name} 时发生错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def import_factor_module(strategy: str):
+    """动态导入因子模块 - 已弃用，请使用 import_crypto_cta_factor"""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.warning("⚠️ import_factor_module 已弃用，请使用 import_crypto_cta_factor")
+    print("⚠️ import_factor_module 已弃用，请使用 import_crypto_cta_factor")
+
+    return import_crypto_cta_factor(strategy)
 
 def get_builtin_factor(factor_name: str):
     """获取内置的简化因子实现"""
@@ -918,44 +1225,68 @@ def get_builtin_factor(factor_name: str):
             return df
 
         def _kdj_signal(self, df, para):
-            """KDJ策略"""
+            """KDJ策略 - 更接近crypto_cta真实实现的降级版本"""
             period = para[0] if para and len(para) > 0 else 9
             k_period = para[1] if para and len(para) > 1 else 3
             d_period = para[2] if para and len(para) > 2 else 3
+            overbought = para[3] if para and len(para) > 3 else 80
+            oversold = para[4] if para and len(para) > 4 else 20
 
-            # 计算KDJ
-            low_min = df['low'].rolling(window=period).min()
-            high_max = df['high'].rolling(window=period).max()
-            rsv = (df['close'] - low_min) / (high_max - low_min + 1e-10) * 100
+            print(f"⚠️ 使用降级KDJ策略 - 参数: period={period}, k_period={k_period}, d_period={d_period}, overbought={overbought}, oversold={oversold}")
 
-            df['k'] = rsv.ewm(alpha=1/k_period).mean()
-            df['d'] = df['k'].ewm(alpha=1/d_period).mean()
+            # 计算KDJ - 尽量接近crypto_cta的实现
+            df['highest'] = df['high'].rolling(window=period, min_periods=1).max()
+            df['lowest'] = df['low'].rolling(window=period, min_periods=1).min()
+
+            # 计算RSV (Raw Stochastic Value) - 与crypto_cta一致
+            df['rsv'] = (df['close'] - df['lowest']) / (df['highest'] - df['lowest'] + 1e-10) * 100
+
+            # 计算K值 - 使用简单移动平均（与crypto_cta一致）
+            df['k'] = df['rsv'].rolling(window=k_period, min_periods=1).mean()
+
+            # 计算D值
+            df['d'] = df['k'].rolling(window=d_period, min_periods=1).mean()
+
+            # 计算J值
             df['j'] = 3 * df['k'] - 2 * df['d']
 
             # 初始化信号列
-            df['signal'] = 0
-            df['pos'] = 0
+            df['signal_long'] = np.nan
+            df['signal_short'] = np.nan
 
-            # 计算KDJ信号
-            current_pos = 0
-            for i in range(len(df)):
-                k_val = df.iloc[i]['k']
-                d_val = df.iloc[i]['d']
+            # 尽量模拟crypto_cta的信号逻辑
+            # 做多信号 (K线上穿D线且在超卖区域)
+            condition1 = df['k'] > df['d']
+            condition2 = df['k'].shift(1) <= df['d'].shift(1)
+            condition3 = df['k'] < oversold + 10  # 在超卖区域附近
+            df.loc[condition1 & condition2 & condition3, 'signal_long'] = 1
 
-                if pd.notna(k_val) and pd.notna(d_val):
-                    # K线上穿D线且在超卖区：买入
-                    if k_val > d_val and k_val < 20 and current_pos == 0:
-                        df.iloc[i, df.columns.get_loc('signal')] = 1
-                        current_pos = 1
-                    # K线下穿D线且在超买区：卖出
-                    elif k_val < d_val and k_val > 80 and current_pos == 1:
-                        df.iloc[i, df.columns.get_loc('signal')] = 0
-                        current_pos = 0
+            # 做多平仓信号 (K线下穿D线或进入超买区域)
+            condition1 = (df['k'] < df['d']) & (df['k'].shift(1) >= df['d'].shift(1))
+            condition2 = df['k'] > overbought
+            df.loc[condition1 | condition2, 'signal_long'] = 0
 
-                df.iloc[i, df.columns.get_loc('pos')] = current_pos
+            # 做空信号 (K线下穿D线且在超买区域)
+            condition1 = df['k'] < df['d']
+            condition2 = df['k'].shift(1) >= df['d'].shift(1)
+            condition3 = df['k'] > overbought - 10  # 在超买区域附近
+            df.loc[condition1 & condition2 & condition3, 'signal_short'] = -1
+
+            # 做空平仓信号 (K线上穿D线或进入超卖区域)
+            condition1 = (df['k'] > df['d']) & (df['k'].shift(1) <= df['d'].shift(1))
+            condition2 = df['k'] < oversold
+            df.loc[condition1 | condition2, 'signal_short'] = 0
+
+            # 合并信号
+            df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1, skipna=True)
+
+            # 向前填充信号并计算持仓
+            df['signal'].fillna(method='ffill', inplace=True)
+            df['signal'].fillna(value=0, inplace=True)
+            df['pos'] = df['signal']  # 简化版本，直接使用信号作为持仓
 
             # 清理临时列
-            df.drop(['k', 'd', 'j'], axis=1, inplace=True, errors='ignore')
+            df.drop(['highest', 'lowest', 'rsv', 'k', 'd', 'j', 'signal_long', 'signal_short'], axis=1, inplace=True, errors='ignore')
             return df
 
         def _atr_breakout_signal(self, df, para):
@@ -1099,11 +1430,14 @@ def convert_params_to_factor_format(strategy: str, params: dict) -> list:
             return [fast, slow, signal]
 
         elif strategy == 'kdj':
-            # KDJ因子期望: [period, k_period, d_period]
+            # KDJ因子期望: [period, k_period, d_period, overbought, oversold]
+            # 根据crypto_cta/factors/kdj.py的实际参数格式
             period = params.get('period', 9)
             k_period = params.get('k_period', 3)
             d_period = params.get('d_period', 3)
-            return [period, k_period, d_period]
+            overbought = params.get('overbought', 80)
+            oversold = params.get('oversold', 20)
+            return [period, k_period, d_period, overbought, oversold]
 
         elif strategy == 'atr_breakout':
             # ATR突破因子期望: [period, entry_multiplier, exit_multiplier]

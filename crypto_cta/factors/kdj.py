@@ -63,13 +63,37 @@ def signal(df, para=[9, 3, 3, 80, 20], proportion=1, leverage_rate=1):
     condition2 = df['k'] < oversold
     df.loc[condition1 | condition2, 'signal_short'] = 0
     
-    # ===== 合并信号
-    df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1, skipna=True)
-    
-    # ===== 由signal计算出实际的每天持有仓位
-    # 在产生signal的K线，以收盘价买入
-    df['signal'].fillna(method='ffill', inplace=True)
-    df['signal'].fillna(value=0, inplace=True)  # 将初始行数的NaN填充为0
-    df['pos'] = df['signal'] * proportion
-    
+    # ===== 合并做多做空信号，去除重复信号
+    # === 合并做多做空信号
+    df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1, skipna=True)  # 合并多空信号，即signal_long与signal_short相加，得到真实的交易信号
+    # === 去除重复信号
+    temp = df[df['signal'].notnull()][['signal']]  # 筛选siganla不为空的数据，并另存一个变量
+    temp = temp[temp['signal'] != temp['signal'].shift(1)]  # 筛选出当前周期与上个周期持仓信号不一致的，即去除重复信号
+    df['signal'] = temp['signal']  # 将处理后的signal覆盖到原始数据的signal列
+
+    # ===== 删除无关变量
+    df.drop(['highest', 'lowest', 'rsv', 'k', 'd', 'j', 'signal_long', 'signal_short'], axis=1, inplace=True)  # 删除临时计算列
+
+    # ===== 止盈止损
+    # 校验当前的交易是否需要进行止盈止损
+    df = process_stop_loss_close(df, proportion, leverage_rate=leverage_rate)  # 调用函数，判断是否需要止盈止损，df需包含signal列
+
     return df
+
+
+# 策略参数组合
+def para_list(period_list=range(5, 20, 2), k_period_list=range(2, 6, 1), d_period_list=range(2, 6, 1)):
+    """
+    产生KDJ策略的参数范围
+    :param period_list: KDJ周期值的列表
+    :param k_period_list: K值平滑周期的列表
+    :param d_period_list: D值平滑周期的列表
+    :return:
+        返回一个大的列表，格式为：[[9, 3, 3, 80, 20]]
+    """
+
+    # ===== 构建遍历的列表
+    para_list = [[period, k_period, d_period, 80, 20] for period in period_list for k_period in k_period_list for d_period in d_period_list]
+
+    # ===== 返回参数列表
+    return para_list
