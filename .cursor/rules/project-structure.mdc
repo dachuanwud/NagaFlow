@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 项目结构指南
+
+本项目的主要入口文件为 `index.js`，配置文件加载自 `config.js`。
+
+- 入口文件：[index.js](mdc:index.js)
+# 项目结构指南
+
+本项目的主要入口文件为 `index.js`，配置文件加载自 `config.js`。
+
+- 入口文件：[index.js](mdc:index.js)
+- 配置文件：[config.js](mdc:config.js)
+
+## 后端结构
+
+- 主入口文件：[main.py](mdc:backend/main.py)
+- 诊断文件：[diagnose_crypto_cta.py](mdc:backend/diagnose_crypto_cta.py)
+- 调试文件：[debug_backtest_signals.py](mdc:backend/debug_backtest_signals.py)
+- 数据库文件：[nagaflow.db](mdc:backend/nagaflow.db)
+- 依赖文件：[requirements.txt](mdc:backend/requirements.txt)
+
+## 前端结构
+
+- 主入口文件：[main.tsx](mdc:frontend/src/main.tsx)
+- 应用文件：[App.tsx](mdc:frontend/src/App.tsx)
+- 样式文件：[App.css](mdc:frontend/src/App.css)
+- 配置文件：[vite.config.ts](mdc:frontend/vite.config.ts)
+
+请根据需要补充更多结构说明。
